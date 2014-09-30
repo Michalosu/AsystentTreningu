@@ -5,6 +5,7 @@ import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -15,23 +16,28 @@ import android.widget.TextView;
 public class Main extends Activity {
 
     private LocationManager locationManager;
-    private TextView Provider;
+    private TextView GPSOnOff;
+    private TextView GPSstatus;
     private TextView Latitude;
-    private TextView Longtitude;
+    private TextView Longitude;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Latitude = (TextView)findViewById(R.id.textView3);
-        Longtitude = (TextView)findViewById(R.id.textView4);
-        Provider  = (TextView)findViewById(R.id.textView6);
+        Longitude = (TextView)findViewById(R.id.textView4);
+        GPSOnOff  = (TextView)findViewById(R.id.textView6);
+        GPSstatus  = (TextView)findViewById(R.id.textView11);
 
         locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
-            Provider.setText("OK");
+            GPSOnOff.setText("ON");
         else
-            Provider.setText("Not ok");
+            GPSOnOff.setText("OFF");
+
+        GPSstatus.setText("Undefined");
+        //Log.i("GPS", locationManager.getGpsStatus().toString());
     }
 
     @Override
@@ -64,26 +70,39 @@ public class Main extends Activity {
 
     private LocationListener locationListener = new LocationListener() {
         @Override
-        public void onStatusChanged(String arg0, int arg1, Bundle arg2) {
+        public void onStatusChanged(String arg0, int status, Bundle arg2) {
+
+            switch (status){
+                case LocationProvider.OUT_OF_SERVICE:
+                    GPSstatus.setText("Out of service");
+                    break;
+                case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                    GPSstatus.setText("Temporarily unavailable");
+                    break;
+                case LocationProvider.AVAILABLE:
+                    GPSstatus.setText("Available");
+                    break;
+            }
 
         }
 
         @Override
         public void onProviderEnabled(String arg0) {
-            Provider.setText("OK");
+            GPSOnOff.setText("ON");
         }
 
         @Override
         public void onProviderDisabled(String arg0) {
-            Provider.setText("Not ok");
+            GPSOnOff.setText("OFF");
         }
 
         @Override
         public void onLocationChanged(Location location) {
             Latitude.setText(String.valueOf(location.getLatitude()));
-            Longtitude.setText(String.valueOf(location.getLongitude()));
+            Longitude.setText(String.valueOf(location.getLongitude()));
+
             Log.i("GPS", "GPS Latitude: " + Latitude);
-            Log.i("GPS", "GPS Longtitude: " + Longtitude);
+            Log.i("GPS", "GPS Longtitude: " + Longitude);
         }
     };
 }
