@@ -9,6 +9,12 @@ public class PositionGPS {
     private double Longitude;
     private long Time;
 
+    public PositionGPS(double latitude, double longitude, long time) {
+        Latitude = latitude;
+        Longitude = longitude;
+        Time = time;
+    }
+
     public double getLatitude() {
         return Latitude;
     }
