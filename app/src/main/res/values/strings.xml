@@ -2,7 +2,8 @@
 <resources>
 
     <string name="app_name">AsystentTreningu</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">Ustawienia</string>
+    <string name="title_activity_settings">Ustawienia</string>
     <string name="start">START</string>
     <string name="stop">STOP</string>
 

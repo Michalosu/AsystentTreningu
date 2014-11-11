@@ -1,16 +1,22 @@
 package pl.edu.pwr.asystenttreningu;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Chronometer;
 import android.widget.TextView;
 import android.widget.Button;
 import android.widget.Toast;
@@ -31,6 +37,9 @@ public class Main extends Activity {
     private TextView longitude;
     private ArrayList<PositionGPS> training;
     private boolean enableTraning;
+    ProgressDialog dialog;
+    private Chronometer chronometer;
+    private SharedPreferences settings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +49,7 @@ public class Main extends Activity {
         longitude = (TextView)findViewById(R.id.textView4);
         gpsOnOff  = (TextView)findViewById(R.id.textView6);
         gpsStatus  = (TextView)findViewById(R.id.textView11);
+        chronometer = (Chronometer)findViewById(R.id.chronometer);
         training = new ArrayList<PositionGPS>();
         enableTraning = false;
 
@@ -58,11 +68,15 @@ public class Main extends Activity {
         {
             public void onClick(View v)
             {
+                Log.i("Main", "Start training");
+                training.clear();
                 enableTraning = true;
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
                         3000,
                         2,
                         locationListener);
+                chronometer.setBase(SystemClock.elapsedRealtime());
+                chronometer.start();
             }
         });
 
@@ -70,6 +84,8 @@ public class Main extends Activity {
         {
             public void onClick(View v)
             {
+                Log.i("Main", "Stop training");
+                chronometer.stop();
                 locationManager.removeUpdates(locationListener);
                 enableTraning = false;
                 writeJSON();
@@ -97,9 +113,70 @@ public class Main extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_settings) {
+            Intent settings = new Intent(Main.this, SettingsActivity.class);
+            startActivity(settings);
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void writeJSON() {
+
+        if(!CheckInternetConnection.checkConnection(getApplicationContext())){
+            Toast.makeText(getApplicationContext(), "Musisz mieć włączony internet!",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        settings = PreferenceManager.getDefaultSharedPreferences(this);
+        String login = settings.getString("settings_login", "brak");
+        String password = settings.getString("settings_password", "brak");
+        JSONObject jsonData = new JSONObject();
+        JSONObject point;
+
+        try {
+            jsonData.put("login", login);
+            jsonData.put("password", password);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        for(PositionGPS p: training) {
+            try {
+                point = new JSONObject();
+                point.put("lat", p.getLatitude());
+                point.put("lng", p.getLongitude());
+                point.put("time", p.getTime());
+                jsonData.accumulate("points", point);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        FileOutputStream outputStream;
+        try {
+            Log.d("JSON", "Try save to: " + getFilesDir() + "JSONfile.txt");
+            outputStream = openFileOutput("data.json", Context.MODE_PRIVATE);
+            outputStream.write(jsonData.toString().getBytes());
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        dialog = ProgressDialog.show(Main.this, "", "Wysyłam dane na serwer...", true);
+
+        new Thread(new Runnable() {
+            public void run() {
+                HttpClient client = new HttpClient("http://37.187.99.85:8000/upload_file/", getFilesDir() + "/data.json", Main.this);
+                //HttpClient client = new HttpClient("http://192.168.1.8:8000/upload_file/", getFilesDir() + "/data.json");
+                try {
+                    client.connectAndSend();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    //Toast.makeText(getApplicationContext(),"Nie udało się wysłać pliku! Spróbuj później!", Toast.LENGTH_LONG).show();
+                }
+                dialog.dismiss();
+            }
+        }).start();
     }
 
     private LocationListener locationListener = new LocationListener() {
@@ -146,27 +223,4 @@ public class Main extends Activity {
         }
     };
 
-    private void writeJSON() {
-        Toast.makeText(getApplicationContext(), "Try save to: " + getFilesDir() + "/JSONfile.txt",
-                Toast.LENGTH_LONG);
-        JSONObject jsonData = new JSONObject();
-        for(PositionGPS p: training) {
-            try {
-                jsonData.put("point1", p.getLatitude());
-                jsonData.put("point2", p.getLongitude());
-                jsonData.put("time", p.getTime());
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        FileOutputStream outputStream;
-        try {
-            Log.d("JSON", "Try save to: " + getFilesDir() + "JSONfile.txt");
-            outputStream = openFileOutput("JSONfile.txt", Context.MODE_PRIVATE);
-            outputStream.write(jsonData.toString().getBytes());
-            outputStream.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }
