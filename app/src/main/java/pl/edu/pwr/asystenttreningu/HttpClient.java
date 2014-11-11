@@ -117,11 +117,9 @@ public class HttpClient {
 
             } catch (MalformedURLException ex) {
                 ex.printStackTrace();
-                //Toast.makeText(activity.getApplicationContext(),"Nie udało się wysłać pliku! Spróbuj później!", Toast.LENGTH_LONG).show();
                 Log.e("Upload file to server", "error: " + ex.getMessage(), ex);
             } catch (Exception e) {
                 e.printStackTrace();
-                //Toast.makeText(activity.getApplicationContext(),"Nie udało się wysłać pliku! Spróbuj później!", Toast.LENGTH_LONG).show();
                 Log.e("Upload file to server Exception", "Exception : "
                         + e.getMessage(), e);
             }

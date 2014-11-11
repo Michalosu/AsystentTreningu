@@ -35,6 +35,8 @@ public class Main extends Activity {
     private TextView gpsStatus;
     private TextView latitude;
     private TextView longitude;
+    private TextView distance;
+    private TextView speed;
     private ArrayList<PositionGPS> training;
     private boolean enableTraning;
     ProgressDialog dialog;
@@ -49,6 +51,8 @@ public class Main extends Activity {
         longitude = (TextView)findViewById(R.id.textView4);
         gpsOnOff  = (TextView)findViewById(R.id.textView6);
         gpsStatus  = (TextView)findViewById(R.id.textView11);
+        distance  = (TextView)findViewById(R.id.textView9);
+        speed  = (TextView)findViewById(R.id.textView12);
         chronometer = (Chronometer)findViewById(R.id.chronometer);
         training = new ArrayList<PositionGPS>();
         enableTraning = false;
@@ -180,6 +184,8 @@ public class Main extends Activity {
     }
 
     private LocationListener locationListener = new LocationListener() {
+        private Location prevLocation;
+        private float whole_distance = 0;
         @Override
         public void onStatusChanged(String arg0, int status, Bundle arg2) {
 
@@ -220,6 +226,15 @@ public class Main extends Activity {
 
             Log.i("GPS", "GPS latitude: " + lat);
             Log.i("GPS", "GPS Longtitude: " + lng);
+
+            if(prevLocation != null){
+                float dDistance = prevLocation.distanceTo(location);
+                whole_distance += dDistance;
+                long dTime = (location.getTime() - prevLocation.getTime())/1000;
+                distance.setText(String.valueOf(Math.round(whole_distance)));
+                speed.setText(String.valueOf((dDistance/dTime)));
+            }
+            prevLocation = location;
         }
     };
 
