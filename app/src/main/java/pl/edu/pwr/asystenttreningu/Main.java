@@ -42,6 +42,8 @@ public class Main extends Activity {
     ProgressDialog dialog;
     private Chronometer chronometer;
     private SharedPreferences settings;
+    private int httpCode;
+    private String httpResponse;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,6 +133,12 @@ public class Main extends Activity {
                     Toast.LENGTH_LONG).show();
             return;
         }
+
+        if(training.isEmpty()){
+            Toast.makeText(getApplicationContext(), "Brak danych GPS! Rozpocznij trening!",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
         settings = PreferenceManager.getDefaultSharedPreferences(this);
         String login = settings.getString("settings_login", "brak");
         String password = settings.getString("settings_password", "brak");
@@ -170,17 +178,32 @@ public class Main extends Activity {
 
         new Thread(new Runnable() {
             public void run() {
-                HttpClient client = new HttpClient("http://37.187.99.85:8000/upload_file/", getFilesDir() + "/data.json", Main.this);
+                HttpClient client = new HttpClient("http://37.187.99.85:8000/upload_file/", getFilesDir() + "/data.json");
                 //HttpClient client = new HttpClient("http://192.168.1.8:8000/upload_file/", getFilesDir() + "/data.json");
-                try {
-                    client.connectAndSend();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    //Toast.makeText(getApplicationContext(),"Nie udało się wysłać pliku! Spróbuj później!", Toast.LENGTH_LONG).show();
-                }
+                client.connectAndSend();
+                httpCode = client.getServerResponseCode();
+                httpResponse = client.getServerResponseMessage();
                 dialog.dismiss();
+
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        String msg = "";
+                        if(httpCode == 200 && httpResponse.equals("OK")){
+                            msg = "Wysyłanie zakończone sukcesem!";
+                        }else if(httpCode == 200 && httpResponse.equals("User does not exist")){
+                            msg = "Niepoprawne dane użytkownika!";
+                        }else if(httpCode == 200 && httpResponse.equals("Data empty")){
+                            msg = "Brak danych treningowych!";
+                        }else{
+                            msg = "Nie udało się wysłać pliku! Spróbuj później";
+                        }
+
+                        Toast.makeText(Main.this, msg,Toast.LENGTH_LONG).show();
+                    }
+                });
             }
         }).start();
+
     }
 
     private LocationListener locationListener = new LocationListener() {
@@ -191,13 +214,13 @@ public class Main extends Activity {
 
             switch (status){
                 case LocationProvider.OUT_OF_SERVICE:
-                    gpsStatus.setText("Out of service");
+                    gpsStatus.setText("Brak zasięgu");
                     break;
                 case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                    gpsStatus.setText("Temporarily unavailable");
+                    gpsStatus.setText("Tymczasowa dostępność");
                     break;
                 case LocationProvider.AVAILABLE:
-                    gpsStatus.setText("Available");
+                    gpsStatus.setText("W porządku");
                     break;
             }
 

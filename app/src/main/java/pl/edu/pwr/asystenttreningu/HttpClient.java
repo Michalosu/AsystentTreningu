@@ -4,9 +4,12 @@ package pl.edu.pwr.asystenttreningu;
  * Created by michalos on 02.10.14.
  */
 
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -20,17 +23,31 @@ public class HttpClient {
 
     private String url;
     private String filePath;
-    int serverResponseCode = 0;
-    public Activity activity;
+    private int serverResponseCode = 0;
+    private String serverResponseMessage;
 
-
-    public HttpClient(String url, String filePath, Activity activity) {
-        this.url = url;
-        this.filePath = filePath;
-        this.activity = activity;
+    public int getServerResponseCode() {
+        return serverResponseCode;
     }
 
-    public void connectAndSend() throws Exception {
+    public void setServerResponseCode(int serverResponseCode) {
+        this.serverResponseCode = serverResponseCode;
+    }
+
+    public String getServerResponseMessage() {
+        return serverResponseMessage;
+    }
+
+    public void setServerResponseMessage(String serverResponseMessage) {
+        this.serverResponseMessage = serverResponseMessage;
+    }
+
+    public HttpClient(String url, String filePath) {
+        this.url = url;
+        this.filePath = filePath;
+    }
+
+    public void connectAndSend(){
 
         String filePath = this.filePath;
 
@@ -53,15 +70,14 @@ public class HttpClient {
         {
             try {
 
-                // open a URL connection to the Servlet
                 FileInputStream fileInputStream = new FileInputStream(sourceFile);
                 URL url = new URL(this.url);
 
-                // Open a HTTP  connection to  the URL
+                // Otwarcie połączenia HTTP
                 conn = (HttpURLConnection) url.openConnection();
-                conn.setDoInput(true); // Allow Inputs
-                conn.setDoOutput(true); // Allow Outputs
-                conn.setUseCaches(false); // Don't use a Cached Copy
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+                conn.setUseCaches(false);
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Connection", "Keep-Alive");
                 conn.setRequestProperty("ENCTYPE", "multipart/form-data");
@@ -76,13 +92,11 @@ public class HttpClient {
 
                 dos.writeBytes(lineEnd);
 
-                // create a buffer of  maximum size
                 bytesAvailable = fileInputStream.available();
 
                 bufferSize = Math.min(bytesAvailable, maxBufferSize);
                 buffer = new byte[bufferSize];
 
-                // read file and write it into form...
                 bytesRead = fileInputStream.read(buffer, 0, bufferSize);
 
                 while (bytesRead > 0) {
@@ -94,23 +108,29 @@ public class HttpClient {
 
                 }
 
-                // send multipart form data necesssary after file data...
                 dos.writeBytes(lineEnd);
                 dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
 
                 // Responses from the server (code and message)
                 serverResponseCode = conn.getResponseCode();
-                String serverResponseMessage = conn.getResponseMessage();
-
+                InputStreamReader in = new InputStreamReader((InputStream) conn.getContent());
+                BufferedReader buff = new BufferedReader(in);
+                serverResponseMessage = buff.readLine();
 
                 if(serverResponseCode == 200){
 
                     Log.d("uploadFile", "HTTP Response is : "
                             + serverResponseMessage + ": " + serverResponseCode);
 
+                    if(serverResponseMessage == "User does not exist"){
+                        throw new UserDoesNotExists("User does not exist");
+                    }
+
+                }else{
+                    throw new ServerException("Server problem.");
                 }
 
-                //close the streams //
+
                 fileInputStream.close();
                 dos.flush();
                 dos.close();
